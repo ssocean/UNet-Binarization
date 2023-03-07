@@ -85,17 +85,15 @@ def train(net,
     start_time = time.localtime()
     try:
         for epoch in tqdm(range(epochs)):
-            # logger.info('开始训练，即将读取epoch')
-            # print('/r')
             logger.info(f'--------------------------第{p}轮训练开始--------------------------')
 
             net.train()
             epoch_loss = 0
-            # print(f"第{epochs}轮开始训练")
+
             e_times = 1
             epoch_fm = 0.0
             for batch in tqdm(train_loader):
-                # logger.info(f'第{p}轮开始训练第{e_times}个batch')
+
                 e_times = e_times + 1
                 
                 imgs = batch['image'].to(device=device)
@@ -197,6 +195,7 @@ def main(args):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
     dataset = BinarizationDataset.BinDataset(imgs_dir, masks_dir,transform=transform_train)
+    
     n_val = int(len(dataset) * args.val_percent)
     n_train = len(dataset) - n_val
     train, val = random_split(dataset, [n_train, n_val])
@@ -206,10 +205,12 @@ def main(args):
     
     optimizer = optim.RMSprop(net.parameters(), lr=args.lr, weight_decay=1e-8, momentum=0.9)
     criterion = BCEWithLogitsLoss()
+    
     try:
         train(net=net,
               optimizer=optimizer,
               train_loader=train_loader,
+              val_loader=val_loader,
               criterion=criterion,
               epochs=args.epoch,
               batch_size=args.batch_size,

@@ -7,9 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 import torch
-import torch.optim as optim
-from torchvision import models
-from torchvision.models.vgg import VGG
+
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
