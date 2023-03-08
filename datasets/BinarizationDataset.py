@@ -5,14 +5,14 @@ from glob import glob
 import torch
 from torch.utils.data import Dataset
 import cv2
-
+from PIL import Image
 
 class BinDataset(Dataset):
     '''
     数据集加载类
     '''
 
-    def __init__(self, imgs_dir, masks_dir):
+    def __init__(self, imgs_dir, masks_dir,transform=None):
         """
         在此完成数据集的读取
         :param imgs_dir: 图片路径,末尾需要带斜杠
@@ -22,7 +22,7 @@ class BinDataset(Dataset):
         self.masks_dir = masks_dir
         self.ids = [splitext(file)[0] for file in listdir(imgs_dir)  # 获取图片名称，ids是一个列表
                     if not file.startswith('.')]
-        pass
+        self.transform = transform
 
 
 
@@ -51,20 +51,25 @@ class BinDataset(Dataset):
 
         assert len(mask_file) == 1, \
             f'未找到图片掩膜{idx}: {mask_file}'
+            
         img = cv2.imread(img_path, 1)
         mask = cv2.imread(mask_path, 1)
 
         assert img.size == mask.size, \
             f'图片与掩膜 {idx} 大小不一致,图片： {img.size} 掩膜： {mask.size}'
 
-        mask = self._otsu_bin(mask)  # 数据问题 需要先做一次二值化
-        mask = mask/255
-        # img = self._channel_combination(img)
-        img = self._preprocess(img)
-        mask = self._preprocess(mask)
+        _,mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY)  # 数据问题 需要先做一次二值化
+        # mask = mask/255
         
+        mask = Image.fromarray(mask)
+        img = Image.fromarray(img)
+        
+        if self.transform is not None:
+            img = self.transform(img)
+            mask = self.transform(mask)
+            
         return {
-            'image': torch.from_numpy(img).type(torch.FloatTensor),
-            'mask': torch.from_numpy(mask).type(torch.FloatTensor)
+            'image': img,
+            'mask': mask
         }
         pass

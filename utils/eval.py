@@ -107,24 +107,19 @@ def psnr(img1, img2):
 def eval_fm(net, loader, device):
     """Evaluation without the densecrf with the dice coefficient"""
     net.eval()
-    mask_type = torch.float32  # torch.float32 if net.n_classes == 1 else torch.long
     n_val = len(loader)  # the number of batch
     tot = 0
     tot_fm = 0.0
     for batch in loader:
         imgs, true_masks = batch['image'], batch['mask']
         imgs = imgs.to(device=device, dtype=torch.float32)
-        true_masks = true_masks.to(device=device, dtype=mask_type)
+        true_masks = true_masks.to(device=device, dtype=torch.float32)
 
         with torch.no_grad():
-            imgs = imgs.transpose(3, 1).transpose(2, 3)
             mask_pred = net(imgs)
             pred = torch.sigmoid(mask_pred)
             pred = (pred > 0.5).float()
             tot += dice_coeff(pred, true_masks).item()
-            # print(pred)
-            # print(true_masks)
-            # print(float(fm(pred,true_masks)))
             tot_fm += round(fm(pred, true_masks), 2)
     print(tot_fm)
     net.train()
