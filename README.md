@@ -6,7 +6,7 @@
 
 ## Introduction
 
-This project aims to provide a solution for image binarization that can be used in computer vision, automation, and other fields. The model uses UNet semantic segmentation, which has shown good performance in the field of binarization.
+This project aims to provide a solution for image segmentation that can be used in many fields, e.g. document binarization. This repo is simple, efficient and flexiable, you can modify anything you want. 
 
 ## Installation
 
@@ -16,18 +16,21 @@ Ensure that the following Python packages have been installed:
 pip install numpy
 pip install torch
 pip install torchvision
-pip install opencv-python==4.4.0.42
-pip install matplotlib
+pip install opencv-python
+pip install tensorboard
 pip install tqdm
 ```
 
+or just pip install the missing package is more than enough.
 
 ## Usage
 
 Navigate to the `src/` directory in the terminal and run the following command:
 
-·python predict.py --input input_path --output output_path·
+·python train.py --input input_path --output output_path·
+### Prepare the data
 
+Set `imgs_dir` and `masks_dir` to your path.
 
 Here, `--input` is the path to the input image and `--output` is the path to where the model will write the output.
 
@@ -35,29 +38,42 @@ Here, `--input` is the path to the input image and `--output` is the path to whe
 
 If you wish to train the model or use your own dataset, follow these steps:
 
-1. Download the [dataset](https://github.com/ssocean/UNet-Binarization/raw/main/dataset/food_data.zip) and unzip it.
+1. Prepare your data as requested. 
 
 2. Launch training with the following command:
-`python train.py --data data_path --epochs 20 --batch_size 32 --lr 0.01 --plot_loss`
+`python train.py`
+```
+Args :
+--imgs_dir: Directory of input images
 
-Here, `--data` points to the path of the dataset, `--epochs` is the total number of epochs you want to train for, `--batch_size` is the batch size for each iteration, and `--lr` is the learning rate. Use the `--plot_loss` parameter if you want to generate a loss chart for the model.
+--masks_dir: Directory of GT masks
 
-3. The trained model will be saved in the `./model/` directory.
+--dir_checkpoint: Directory to save the checkpoints.
 
-## Model Prediction Examples
+--input_size: Size of input images
 
-Below are some examples of model outputs. More can be found in the `./results/` directory.
+--epoch: Number of epochs for training
 
-![Example 1](./results/1.png)
+--batch_size: Batch size for training
 
-![Example 2](./results/2.png)
+--val_percent: Percentage of validation data
 
-## References
+--lr: Learning rate for training
 
-- UNet: Convolutional Networks for Biomedical Image Segmentation. Olaf Ronneberger, Philipp Fischer, and Thomas Brox. MICCAI 2015.
+--weight_decay: Weight decay factor for training
 
-## License
+--momentum: Momentum factor for the optimizer
+```
 
-This project is distributed under the [MIT License](./LICENSE).
+Modify those args if needed.
+
+## Model Inference
+
+`python infer.py`
+
+
+
+
+
 
 
