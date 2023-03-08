@@ -79,11 +79,11 @@ Args :
 
 --out_dir: The directory to save the output images after processing.
 
---model_pth: The path to the saved neural network model.
+--model_pth: The path to the trained network model.
 
 --batch_size: The number of images to process in each batch.
 
---patch_size: The size of each image patch to be processed.
+--patch_size: The size of each image patch to be processed, recommand 256.
 
 --bitwise_img_size: The size of the images after bitwise operations. We recommend setting this value to as large as possible.
 ```
