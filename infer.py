@@ -1,5 +1,6 @@
 import argparse
 from os.path import splitext
+from datasets.BinarizationDataset import Single_Img_Infer_Dataset
 
 import cv2
 import torch
@@ -11,13 +12,17 @@ import models.Models as Models
 from models.Models import UNet, AttU_Net
 import os
 import glob
-
-from workshop.GeneralTools import auto_make_directory
-
+from torch.utils.data import DataLoader
+from utils.FileOperator import *
+import torchvision.transforms as transforms
 parser = argparse.ArgumentParser()
-parser.add_argument("--imgs_dir")
-parser.add_argument("--out_dir")
-parser.add_argument("--model_pth")
+parser.add_argument("--imgs_dir",default=r'D:\Data\DAR\image')
+parser.add_argument("--out_dir",default=r'D:\Data\DIBCO-mini\out')
+parser.add_argument("--model_pth",default=r'C:\Users\Ocean\Documents\GitHub\outputs\2023_Mar_08_13_UNet_BestResult.pth')
+parser.add_argument("--batch_size",default=4)
+parser.add_argument("--patch_size",default=256)
+parser.add_argument("--bitwise_img_size",default=1024,help='img size for bitwise ot operations. We recommand you to set this args as large as possible.')
+
 args = parser.parse_args()
 def fold32(tup):
     return (int(int(tup[0] / 32) * 32), int(int(tup[1] / 32) * 32))
@@ -188,8 +193,8 @@ def getFileList(pth):
         rst.append(filename)
     return rst
 
-
-def dir_c2b(img_dir, rst_dir, is_bin=False):
+import torchvision.utils
+def dir_c2b(img_dir, rst_dir, need_bitwise=True):
     '''
     将一个文件夹内所有的彩色图片进行二值化
     :param img_dir: 待二值化图片所在路径
@@ -200,21 +205,84 @@ def dir_c2b(img_dir, rst_dir, is_bin=False):
     auto_make_directory(rst_dir)
     # 保存的模型文件路径
     net = Models.UNet()
-
+    assert args.bitwise_img_size%32==0,'bitwise_img_size should only be a multiple of 32' 
     weights_path = args.model_pth # 保存的模型文件路径
 
     net.load_state_dict(torch.load(weights_path))
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('cpu')
+    
+    net.to(device=device)
+    net.eval()
+    
     print(img_dir)
-    imgs_list = getFileList(img_dir)
+    imgs_list = get_files_pth(img_dir)
     print(imgs_list)
-    for img_name in tqdm(imgs_list):
-        pth = os.path.join(img_dir, img_name)
-        _generate_rst_img(pth, rst_dir, net, device, patch_size=0, mag_scale=1.0, is_bin=is_bin)
+    import math
+    from PIL import Image
+    for img_pth in tqdm(imgs_list):
+        img = Image.open(img_pth)
+        ori_w,ori_h = img.size
+        target_size = math.floor(img.size[0] / args.patch_size) * args.patch_size, math.floor(img.size[1] / args.patch_size) * args.patch_size
+        nrow = int(target_size[0] / args.patch_size)
 
-
-# /mnt/penghai/data/img/ /mnt/penghai/hp-unet/unet-rst/img
+        big_pic = img
+        pred_np = np.zeros((target_size[0], target_size[1]), dtype=np.uint8)
+        
+        transform_infer = transforms.Compose([
+        transforms.Resize(target_size),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.ToTensor()
+        ])
+        
+        img = transform_infer(img)
+        
+        single_dataset = Single_Img_Infer_Dataset(img,patch_size=args.patch_size)
+        
+        data_loader = DataLoader(single_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8, pin_memory=True)
+        pred_lst = []
+        
+        for batch in data_loader:
+            batch = batch.to(device=device)
+            with torch.no_grad():
+                out = net(batch)
+            pred_lst.append(out)
+        rst_batch = torch.cat(pred_lst, dim=0)
+        grid = torchvision.utils.make_grid(rst_batch, nrow=nrow, padding=0)
+        
+        img_name = get_filename_from_pth(img_pth)
+        
+        pred_np = torch.einsum("chw->hwc", grid).cpu().detach().numpy()
+        pred_np = cv2.resize(pred_np,(ori_w,ori_h))
+        pred_np *= 255
+        pred_np = pred_np.astype(np.uint8)
+       
+        
+        pred_np = cv2.cvtColor(pred_np, cv2.COLOR_BGR2GRAY)
+        _, pred_np = cv2.threshold(pred_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+        transform = transforms.Compose([
+            transforms.Resize((args.bitwise_img_size,args.bitwise_img_size)), #长边缩放至1024
+            transforms.Grayscale(num_output_channels=1),
+            transforms.ToTensor()
+        ])    
+        
+        
+        if need_bitwise:
+            big_pic =transform(big_pic).unsqueeze(0).to(device=device)
+            with torch.no_grad():
+                out = net(big_pic)
+            out = torch.einsum('bchw->bhwc', out).cpu().detach().numpy()
+            big_pic_np = np.uint8(out[0])
+            big_pic_np = cv2.resize(big_pic_np,(ori_w,ori_h))
+            _, big_pic_np = cv2.threshold(big_pic_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            pred_np = cv2.bitwise_or(big_pic_np,pred_np)
+            
+        
+        ret = cv2.imwrite(os.path.join(out_dir,f"{img_name}.png"), pred_np)
+        assert ret, 'Save Failed'
+        
 
 
 if __name__ == '__main__':
