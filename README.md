@@ -12,14 +12,14 @@ This project aims to provide a solution for image binarization that can be used 
 
 Ensure that the following Python packages have been installed:
 
-···
+```python
 pip install numpy
 pip install torch
 pip install torchvision
 pip install opencv-python==4.4.0.42
 pip install matplotlib
 pip install tqdm
-···
+```
 
 
 ## Usage
@@ -38,7 +38,7 @@ If you wish to train the model or use your own dataset, follow these steps:
 1. Download the [dataset](https://github.com/ssocean/UNet-Binarization/raw/main/dataset/food_data.zip) and unzip it.
 
 2. Launch training with the following command:
-·python train.py --data data_path --epochs 20 --batch_size 32 --lr 0.01 --plot_loss·
+`python train.py --data data_path --epochs 20 --batch_size 32 --lr 0.01 --plot_loss`
 
 Here, `--data` points to the path of the dataset, `--epochs` is the total number of epochs you want to train for, `--batch_size` is the batch size for each iteration, and `--lr` is the learning rate. Use the `--plot_loss` parameter if you want to generate a loss chart for the model.
 
